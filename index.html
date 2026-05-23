@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a56e8">
+<meta name="description" content="MediQueue Next — Bangladesh chamber queue management system. Patient token allocation, billing, TV display, analytics.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MediQueue Next">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+
+<title>MediQueue Next — Chamber Management</title>
+
+<!-- PWA Manifest — GitHub Pages relative path -->
+<link rel="manifest" href="./manifest.json">
+
+<!-- Apple Touch Icons -->
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="152x152" href="./icons/icon-152.png">
+<link rel="apple-touch-icon" sizes="144x144" href="./icons/icon-144.png">
+<link rel="apple-touch-icon" sizes="128x128" href="./icons/icon-128.png">
+<link rel="apple-touch-icon" sizes="96x96"   href="./icons/icon-96.png">
+<link rel="apple-touch-icon" sizes="72x72"   href="./icons/icon-72.png">
+
+<!-- Favicon -->
+<link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-96.png">
+<link rel="icon" type="image/png" sizes="16x16" href="./icons/icon-72.png">
+<link rel="shortcut icon" href="./icons/icon-96.png">
+
+<!-- Preconnect to external resources for faster loading -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Kalpurush Bengali Font — Primary Bengali typeface -->
+<style>
+@font-face {
+  font-family: 'Kalpurush';
+  src: url('https://cdn.jsdelivr.net/npm/kalpurush@1.0.0/Kalpurush.woff2') format('woff2'),
+       url('https://cdn.jsdelivr.net/npm/kalpurush@1.0.0/Kalpurush.woff') format('woff'),
+       url('https://fonts.maateen.me/kalpurush/font/Kalpurush.woff2') format('woff2');
+  font-weight: normal; font-style: normal; font-display: swap;
+}
+</style>
+
+<!-- App stylesheet (all CSS extracted from original single-file app) -->
+<link rel="stylesheet" href="./styles.css">
+
+<!-- Supabase — must load before app.js since _supa is used at module level -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+<!--
+  Firebase — NOT yet active. To enable Firebase backend:
+  1. Fill FIREBASE_CONFIG in firebase-config.js
+  2. Set FIREBASE_ENABLED = true in firebase-config.js
+  3. Uncomment the three <script> tags below
+  4. Remove or disable the Supabase <script> tag above
+  See README.md for full migration guide.
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+-->
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     LOGIN SCREEN
+══════════════════════════════════════════════ -->
+<div class="login-wrap" id="login-wrap">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo-ring">🏥</div>
+      <div class="login-title-main">MediQueue Next</div>
+      <div class="login-title-sub">Diagnostic Centre Management System · Bangladesh</div>
+    </div>
+    <div class="login-body">
+
+      <!-- STEP 1: Credentials -->
+      <div id="login-step-1">
+        <div class="form-group">
+          <label class="login-field-label">Username / User ID</label>
+          <input type="text" class="login-input" id="login-username" placeholder="e.g. jogesh, admin, dr_bose" autocomplete="username"
+            onkeydown="if(event.key==='Enter')document.getElementById('login-pin-inp').focus()" oninput="clearLoginErr()" />
+        </div>
+        <div class="login-divider"><hr><span>then enter PIN</span><hr></div>
+        <label class="login-field-label" id="login-pin-label">PIN (4–6 digit)</label>
+        <input type="password" class="login-input login-pin-input" id="login-pin-inp"
+          maxlength="6" inputmode="numeric" pattern="[0-9]*" placeholder="••••"
+          onkeydown="if(event.key==='Enter')doLoginStep1()" oninput="clearLoginErr()" autocomplete="current-password" />
+        <div class="login-error" id="login-error">❌ ভুল Username বা PIN।</div>
+        <button class="login-btn" onclick="doLoginStep1()">Next →</button>
+        <div class="login-hint">
+          Default: <strong>admin</strong>/9999 · <strong>dr_bose</strong>/1234 · <strong>jogesh</strong>/0000 · <strong>shahin</strong>/1111 · <strong>desk1</strong>/5678
+        </div>
+      </div>
+
+      <!-- STEP 2: Doctor Selection (shown when user has access to multiple doctors or no fixed assignment) -->
+      <div id="login-step-2" style="display:none">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <button onclick="backToStep1()" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);color:var(--text2)">← Back</button>
+          <div>
+            <div style="font-size:13px;font-weight:800;color:var(--text)" id="login-step2-user"></div>
+            <div style="font-size:11px;color:var(--text3)" id="login-step2-role"></div>
+          </div>
+        </div>
+        <label class="doctor-selector-label">কোন Doctor-এর Chamber-এ কাজ করছেন? *</label>
+        <div class="doctor-grid" id="doctor-select-grid">
+          <!-- populated dynamically -->
+        </div>
+        <div class="login-error" id="login-error-step2" style="margin-top:10px">❌ Doctor select করুন।</div>
+        <button class="login-btn" style="margin-top:14px" onclick="doLoginStep2()">🔓 Login করুন</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════════════ -->
+<div class="app" id="app" style="display:none">
+
+  <div class="topbar">
+    <div class="topbar-logo" id="tb-logo">MQ</div>
+    <div class="topbar-info">
+      <h1 id="tb-title">Loading...</h1>
+      <p id="tb-sub">MediQueue Next</p>
+    </div>
+    <div class="topbar-clock" id="live-clock">--:--:--</div>
+    <div class="sync-badge sync-wait" id="sync-badge">🟡 Connecting</div>
+    <!-- Doctor switcher -->
+    <div id="doctor-switcher-chip" onclick="openDoctorSwitcher()" style="display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;background:var(--purple-soft);border:1.5px solid #c4b5fd;color:var(--purple);white-space:nowrap;transition:all 0.15s;flex-shrink:0" title="Switch Doctor">
+      🩺 <span id="current-doctor-name">—</span> <span style="font-size:9px;opacity:0.6">▼</span>
+    </div>
+    <div id="doc-status-chip" class="doc-status-chip ds-arriving" onclick="if(canDo('doctor_status'))switchTab('doctor')">
+      <div style="width:7px;height:7px;border-radius:50%;background:currentColor;opacity:0.6"></div>
+      <span id="doc-status-text">Arriving</span>
+    </div>
+    <span class="role-badge rb-assistant" id="header-role-badge">Assistant</span>
+    <div class="user-chip" id="user-chip" onclick="doLogout()">
+      <div class="u-dot"></div>
+      <span id="user-chip-name">—</span>
+      <span style="font-size:10px;color:var(--text3)">Logout</span>
+    </div>
+  </div>
+
+  <div class="navbar" id="navbar">
+    <div class="nav-tab active" data-tab="queue"    onclick="switchTab('queue')">📋 Queue <span class="nbadge nb-red" id="nb-queue">0</span></div>
+    <div class="nav-tab hidden" data-tab="entry"    onclick="switchTab('entry')" id="nav-entry">➕ Add Patient</div>
+    <div class="nav-tab hidden" data-tab="doctor"   onclick="switchTab('doctor')" id="nav-doctor">🩺 Doctor</div>
+    <div class="nav-tab hidden" data-tab="refs"     onclick="switchTab('refs')" id="nav-refs">📁 References <span class="nbadge nb-purple" id="nb-refs">0</span></div>
+    <div class="nav-tab" data-tab="display"         onclick="switchTab('display')">📺 TV Display</div>
+    <div class="nav-tab hidden" data-tab="users"    onclick="switchTab('users')" id="nav-users">👥 Users</div>
+    <div class="nav-tab hidden" data-tab="schedule" onclick="switchTab('schedule')" id="nav-schedule">📅 Schedule</div>
+    <div class="nav-tab hidden" data-tab="audit"    onclick="switchTab('audit')" id="nav-audit">🔒 Audit <span class="nbadge nb-amber" id="nb-audit">0</span></div>
+    <div class="nav-tab hidden" data-tab="reports"  onclick="switchTab('reports')" id="nav-reports">📊 Reports</div>
+    <div class="nav-tab hidden" data-tab="settings" onclick="switchTab('settings')" id="nav-settings">⚙️ Settings</div>
+  </div>
+
+  <div class="main" id="main-content"></div>
+</div>
+
+<!-- ══════ MODALS ══════ -->
+<div class="modal-overlay" id="modal-skip">
+  <div class="modal">
+    <h3>⏭️ Skip Patient</h3>
+    <div class="form-group">
+      <label class="form-label">Reason *</label>
+      <select class="form-select" id="skip-reason-sel">
+        <option value="">— Select —</option>
+        <option>Patient not responding to call</option>
+        <option>Patient requested more time</option>
+        <option>Patient in washroom</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Details (optional)</label>
+      <input type="text" class="form-input" id="skip-reason-txt" placeholder="Additional notes..." />
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-danger" onclick="confirmSkip()" style="flex:1">Confirm Skip</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-skip')" style="flex:1">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-upload-ref">
+  <div class="modal">
+    <h3>📎 Upload Patient Reference</h3>
+    <div class="form-group">
+      <label class="form-label">Select Patient *</label>
+      <input type="text" class="form-input" id="ref-patient-search" placeholder="Search by name..." oninput="filterRefPatients()" />
+      <div class="patient-search-list" id="ref-patient-list"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Document Category *</label>
+      <select class="form-select" id="ref-category">
+        <option value="prescription">Previous Prescription</option>
+        <option value="lab">Lab Report</option>
+        <option value="scan">Scan / MRI / CT</option>
+        <option value="ecg">ECG</option>
+        <option value="discharge">Discharge Summary</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes (optional)</label>
+      <input type="text" class="form-input" id="ref-notes" placeholder="e.g. Chest X-Ray June 2025" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Upload File (PDF / JPG / PNG, max 5MB)</label>
+      <div class="upload-area" onclick="document.getElementById('ref-file-input').click()">
+        <div id="upload-area-txt">📂 Click to select file</div>
+        <input type="file" id="ref-file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleRefFile(event)" />
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="saveReference()" style="flex:1">💾 Save</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-upload-ref')" style="flex:1">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-preview">
+  <div class="modal" style="max-width:540px">
+    <h3 id="preview-title">Preview</h3>
+    <div id="preview-content" style="margin-top:10px;text-align:center"></div>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeModal('modal-preview')" style="flex:1">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-user-edit">
+  <div class="modal">
+    <h3 id="user-edit-title">Add User</h3>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label class="form-label">Full Name *</label>
+        <input type="text" class="form-input" id="ue-name" placeholder="e.g. Rahim Uddin" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Username / ID *</label>
+        <input type="text" class="form-input" id="ue-username" placeholder="e.g. rahim (no spaces)" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">PIN (4-6 digits) *</label>
+        <input type="password" class="form-input" id="ue-pin" placeholder="••••" maxlength="6" inputmode="numeric" autocomplete="new-password" />
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Role *</label>
+        <select class="form-select" id="ue-role" onchange="showDoctorField()">
+          <option value="superadmin">👑 Super Admin</option>
+          <option value="doctor">🩺 Doctor</option>
+          <option value="senior_assistant">💼 Senior Assistant</option>
+          <option value="assistant" selected>👤 Assistant</option>
+          <option value="desk">🖥️ Desk</option>
+          <option value="viewer">👁️ Viewer</option>
+        </select>
+      </div>
+      <div class="form-group full" id="ue-doctor-field">
+        <label class="form-label">Assigned Doctor <span style="font-size:10px;color:var(--text3)">(কোন Doctor-এর under-এ কাজ করবেন)</span></label>
+        <select class="form-select" id="ue-assigned-doctor">
+          <option value="">— All Doctors (কোনো নির্দিষ্ট Doctor নয়) —</option>
+        </select>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Notes / Designation</label>
+        <input type="text" class="form-input" id="ue-notes" placeholder="e.g. Front desk, Morning shift" />
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="saveUserEdit()" style="flex:1" id="ue-save-btn">💾 Save User</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-user-edit')" style="flex:1">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-schedule-edit">
+  <div class="modal">
+    <h3>📅 Configure Day Schedule</h3>
+    <div class="form-group">
+      <label class="form-label">Doctor</label>
+      <select class="form-select" id="sch-doctor"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Date</label>
+      <input type="date" class="form-input" id="sch-date" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Maximum Patients *</label>
+      <input type="number" class="form-input" id="sch-max" min="1" max="500" placeholder="e.g. 50" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Reserved Slot Interval</label>
+      <select class="form-select" id="sch-reserved">
+        <option value="0">No reserved slots</option>
+        <option value="5">Every 5th slot reserved</option>
+        <option value="10">Every 10th slot reserved</option>
+        <option value="15">Every 15th slot reserved</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="saveScheduleConfig()" style="flex:1">💾 Save Schedule</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-schedule-edit')" style="flex:1">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-doctor-switch">
+  <div class="modal" style="max-width:380px">
+    <h3>🩺 Doctor Switch</h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:14px">কোন Doctor-এর Chamber-এ switch করবেন?</p>
+    <div class="doctor-grid" id="doctor-switch-grid"></div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="btn btn-secondary" onclick="closeModal('modal-doctor-switch')" style="flex:1">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPDATED SECTION — Doctor Registry Edit Modal -->
+<div class="modal-overlay" id="modal-doctor-edit">
+  <div class="modal" style="max-width:440px">
+    <h3 id="doctor-edit-title">➕ Add New Doctor</h3>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label class="form-label">Bengali Name <span style="color:var(--red)">*</span></label>
+        <input type="text" class="form-input" id="de-nameBn" placeholder="ডাঃ. বি. কে. বোস" />
+      </div>
+      <div class="form-group full">
+        <label class="form-label">English Name <span style="color:var(--red)">*</span></label>
+        <input type="text" class="form-input" id="de-nameEn" placeholder="Dr. B. K. Bose" />
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Qualifications</label>
+        <input type="text" class="form-input" id="de-qual" placeholder="MBBS, MCPS · Specialist" />
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Room / Chamber</label>
+        <input type="text" class="form-input" id="de-room" placeholder="Room 1" />
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Specialty</label>
+        <input type="text" class="form-input" id="de-specialty" placeholder="e.g. Chest Medicine, Cardiology" />
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Consultation Fee (৳)</label>
+        <input type="number" class="form-input" id="de-fee" placeholder="500" min="0" />
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Prescription Software URL</label>
+        <input type="url" class="form-input" id="de-rxurl" placeholder="https://digitalrxpro.com" />
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="saveDoctorEdit()" style="flex:1" id="de-save-btn">💾 Add Doctor</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-doctor-edit')" style="flex:1">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-billing">
+  <div class="modal" style="max-width:420px">
+    <h3 id="billing-modal-title">💳 Patient Billing</h3>
+    <div id="billing-modal-body"></div>
+    <div class="modal-btns" id="billing-modal-btns">
+      <button class="btn btn-primary" onclick="saveBilling()" style="flex:1">💾 Save</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-billing')" style="flex:1">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPDATED SECTION — CALLING BANNER (injected dynamically) -->
+
+<!-- UPDATED SECTION — Recall Patient Modal -->
+<div class="modal-overlay" id="modal-recall">
+  <div class="modal" style="max-width:460px">
+    <h3>🔄 Recall Patient — Re-add to Queue</h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:12px" class="bn">পুরনো রোগীকে আবার queue-এ ফিরিয়ে আনুন।</p>
+    <div class="form-group">
+      <label class="form-label">Search Completed / No-Show Patients</label>
+      <input type="text" class="form-input" id="recall-search" placeholder="নাম বা মোবাইল নম্বর..." oninput="filterRecallPatients()" />
+    </div>
+    <div class="recall-patient-list" id="recall-list"></div>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeModal('modal-recall')" style="flex:1">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-fill-reserved">
+  <div class="modal" style="max-width:420px">
+    <h3>⭐ Fill Reserved Slot #<span id="fill-token-num"></span></h3>
+    <div class="form-group">
+      <label class="form-label">Patient Name *</label>
+      <input type="text" class="form-input" id="fill-name" placeholder="Full name" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Phone *</label>
+      <input type="tel" class="form-input" id="fill-phone" placeholder="01X-XXXXXXXX" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Age</label>
+      <input type="number" class="form-input" id="fill-age" placeholder="Years" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Gender</label>
+      <select class="form-select" id="fill-gender">
+        <option value="M">Male</option>
+        <option value="F">Female</option>
+        <option value="C">Child</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Priority</label>
+      <select class="form-select" id="fill-priority">
+        <option value="regular">Regular</option>
+        <option value="emergency">Emergency</option>
+        <option value="docref">Doc Ref</option>
+        <option value="followup">Follow-up</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <input type="text" class="form-input" id="fill-notes" placeholder="Optional notes" />
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="confirmFillReservedSlot()" style="flex:1">✅ Fill Slot</button>
+      <button class="btn btn-secondary" onclick="closeModal('modal-fill-reserved')" style="flex:1">Cancel</button>
+    </div>
+  </div>
+</div>
+<nav class="mobile-bottom-nav" id="mobile-bottom-nav" style="display:none">
+  <div class="mbn-item-wrap" onclick="switchTab('queue')">
+    <div class="mbn-item" id="mbn-queue">
+      <span class="mbn-icon">📋</span>
+      <span class="mbn-lbl">Queue</span>
+    </div>
+    <span class="mbn-badge" id="mbn-badge-queue" style="display:none">0</span>
+  </div>
+  <div class="mbn-item-wrap" onclick="switchTab('entry')">
+    <div class="mbn-item" id="mbn-entry">
+      <span class="mbn-icon">➕</span>
+      <span class="mbn-lbl">Register</span>
+    </div>
+  </div>
+  <div class="mbn-item-wrap" onclick="switchTab('doctor')">
+    <div class="mbn-item" id="mbn-doctor">
+      <span class="mbn-icon">🩺</span>
+      <span class="mbn-lbl">Doctor</span>
+    </div>
+  </div>
+  <div class="mbn-item-wrap" onclick="switchTab('display')">
+    <div class="mbn-item" id="mbn-display">
+      <span class="mbn-icon">📺</span>
+      <span class="mbn-lbl">TV</span>
+    </div>
+  </div>
+  <div class="mbn-item-wrap" onclick="switchTab('reports')">
+    <div class="mbn-item" id="mbn-reports">
+      <span class="mbn-icon">📊</span>
+      <span class="mbn-lbl">Reports</span>
+    </div>
+  </div>
+</nav>
+
+<div class="version-tag">v13.0 · Enterprise Edition</div>
+
+<!-- ══════ SUPABASE ══════ -->
+
+
+
+<!-- Firebase config & StorageAdapter abstraction layer (FIREBASE_ENABLED=false, Supabase active) -->
+<script src="./firebase-config.js"></script>
+
+<!-- Main application — all queue engine, UI render, Supabase sync, PWA registration -->
+<script src="./app.js"></script>
+</body>
+</html>
