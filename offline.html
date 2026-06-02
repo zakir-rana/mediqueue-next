@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a56e8">
+<title>Offline — MediQueue Next</title>
+<style>
+  /* Self-contained: NO external resources (must render with zero network) */
+  :root {
+    --bg:     #0a1628;
+    --surface:#0f1d33;
+    --accent: #1a56e8;
+    --accent2:#0ea5e9;
+    --text:   #f3f6fc;
+    --text2:  #9fb0c9;
+    --border: #1c2c47;
+    /* System Bengali fallbacks — CDN fonts are unavailable offline */
+    --font-bn: 'Hind Siliguri', 'SolaimanLipi', 'Siyam Rupali',
+               'Noto Sans Bengali', 'Nirmala UI', system-ui, sans-serif;
+    --font:    system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(26,86,232,0.18), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100svh;
+    padding: max(24px, env(safe-area-inset-top))
+             max(24px, env(safe-area-inset-right))
+             max(24px, env(safe-area-inset-bottom))
+             max(24px, env(safe-area-inset-left));
+    text-align: center;
+    -webkit-font-smoothing: antialiased;
+  }
+  .card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 28px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+  }
+  .logo {
+    width: 84px; height: 84px;
+    margin: 0 auto 22px;
+    border-radius: 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    box-shadow: 0 10px 28px rgba(26,86,232,0.45);
+  }
+  .brand {
+    font-size: 15px; font-weight: 800; letter-spacing: 0.5px;
+    color: var(--text2); text-transform: uppercase; margin-bottom: 18px;
+  }
+  .brand b { color: var(--text); }
+  .status-dot {
+    display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    background: #ef4444; margin-right: 7px; vertical-align: middle;
+    box-shadow: 0 0 0 4px rgba(239,68,68,0.18);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  h1 {
+    font-size: 21px; font-weight: 800; line-height: 1.3; margin-bottom: 12px;
+  }
+  .msg-bn {
+    font-family: var(--font-bn);
+    font-size: 16px; line-height: 1.75; color: var(--text2);
+    margin-bottom: 8px;
+  }
+  .msg-en {
+    font-size: 14px; line-height: 1.6; color: var(--text2); margin-bottom: 28px;
+  }
+  .btn {
+    appearance: none; border: none; cursor: pointer;
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; font-family: var(--font);
+    font-size: 16px; font-weight: 800; letter-spacing: 0.3px;
+    padding: 15px 18px; border-radius: 14px;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+    box-shadow: 0 8px 22px rgba(26,86,232,0.40);
+  }
+  .btn:hover { box-shadow: 0 10px 28px rgba(26,86,232,0.55); }
+  .btn:active { transform: translateY(1px); opacity: 0.92; }
+  .btn .bn { font-family: var(--font-bn); font-weight: 700; }
+  .hint {
+    margin-top: 18px; font-size: 12px; color: var(--text2); opacity: 0.7;
+  }
+  .net-back {
+    margin-top: 14px; font-size: 13px; font-weight: 700;
+    color: var(--accent2); min-height: 18px;
+  }
+</style>
+</head>
+<body>
+  <main class="card" role="alert" aria-live="polite">
+    <div class="logo" aria-hidden="true">🩺</div>
+    <div class="brand"><b>MediQueue</b> Next</div>
+
+    <h1><span class="status-dot" aria-hidden="true"></span>You are offline</h1>
+
+    <p class="msg-bn">আপনি এখন অফলাইনে আছেন। Internet সংযোগ চেক করুন।</p>
+    <p class="msg-en">You are offline. Please check your connection.</p>
+
+    <button class="btn" type="button" onclick="window.location.reload()">
+      ↻ Retry / <span class="bn">আবার চেষ্টা করুন</span>
+    </button>
+
+    <div class="net-back" id="net-back"></div>
+    <p class="hint">Saved queue data stays on this device and will sync once you reconnect.</p>
+  </main>
+
+  <script>
+    // Auto-detect reconnection and reload (offline-safe, no external calls)
+    window.addEventListener('online', function () {
+      var el = document.getElementById('net-back');
+      if (el) el.textContent = 'Connection restored — reloading…';
+      setTimeout(function () { window.location.reload(); }, 900);
+    });
+  </script>
+</body>
+</html>
