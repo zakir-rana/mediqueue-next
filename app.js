@@ -297,7 +297,6 @@ let scheduleConf = loadScheduleConf();
       await saveDoctorsToSupabase(doctorStore);
     }
     console.log('[Startup] Users & Doctors synced from Supabase');
-    // Re-render if UI already loaded
     if (typeof renderUsersTab === 'function') renderUsersTab();
     if (typeof renderSettingsTab === 'function') renderSettingsTab();
   } catch(e) {
@@ -3427,26 +3426,48 @@ function toBengaliWord(n) {
   if (hundreds > 0) return BANGLA_WORDS[hundreds] + ' শত ' + (BANGLA_WORDS[remainder] || toBengaliDigit(remainder));
   return toBengaliDigit(n);
 }
+/// UPDATED SECTION — Bengali announcement text
 function makeBanglaAnnouncement(token, name, isEmergency, doctorNameBn) {
   const tokenBn = toBengaliDigit(token);
-  const wordBn  = toBengaliWord(token);
   if (isEmergency) {
-    return `জরুরি রোগী! টোকেন নম্বর ${tokenBn}, দয়া করে দ্রুত ডাক্তারের কক্ষে আসুন।`;
+    return `জরুরি রোগী! টোকেন নম্বর- ${tokenBn}, রোগীর নাম- ${name}, দয়া করে দ্রুত সামনে আসুন।`;
   }
-  return `টোকেন নম্বর ${tokenBn} (${wordBn}), রোগী ${name}, দয়া করে ${doctorNameBn ? doctorNameBn + '-এর ' : ''}কক্ষে আসুন।`;
+  return `টোকেন নম্বর- ${tokenBn}, রোগীর নাম- ${name}, দয়া করে সামনে আসুন।`;
 }
+
+/// UPDATED SECTION — Female Bengali TTS
 function speakBanglaAnnouncement(text, isEmergency) {
   try {
     speechSynthesis.cancel();
-    // Try Bengali voice first
-    const voices = speechSynthesis.getVoices();
-    const bnVoice = voices.find(v => v.lang.startsWith('bn') || v.lang.startsWith('hi'));
     const utt = new SpeechSynthesisUtterance(text);
-    if (bnVoice) { utt.voice = bnVoice; utt.lang = 'bn-BD'; }
-    else { utt.lang = 'bn-BD'; }
-    utt.rate = isEmergency ? 1.1 : 0.85;
-    utt.volume = 0.95;
-    speechSynthesis.speak(utt);
+    utt.lang = 'bn-BD';
+    utt.rate = isEmergency ? 1.0 : 0.82;
+    utt.pitch = 1.15;   // slightly higher pitch = more feminine tone
+    utt.volume = 1.0;
+
+    const trySpeak = () => {
+      const voices = speechSynthesis.getVoices();
+      // Priority: Bengali female → Bengali any → Hindi female → Hindi any → default
+      const female = voices.find(v =>
+        (v.lang.startsWith('bn')) && /female|woman|girl/i.test(v.name)
+      ) || voices.find(v => v.lang.startsWith('bn')
+      ) || voices.find(v =>
+        v.lang.startsWith('hi') && /female|woman|girl/i.test(v.name)
+      ) || voices.find(v => v.lang.startsWith('hi'));
+
+      if (female) {
+        utt.voice = female;
+        utt.lang  = female.lang;
+      }
+      speechSynthesis.speak(utt);
+    };
+
+    // Voices may not be loaded yet on first call
+    if (speechSynthesis.getVoices().length === 0) {
+      speechSynthesis.addEventListener('voiceschanged', trySpeak, { once: true });
+    } else {
+      trySpeak();
+    }
   } catch(e) {
     // TTS not available — silent
   }
