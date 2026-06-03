@@ -221,17 +221,50 @@ const DEFAULT_DOCTORS = [
   },
 ];
 
+/// UPDATED SECTION — Supabase sync for users & doctors
+async function loadUsersFromSupabase() {
+  try {
+    const { data, error } = await _supa.from('users').select('*');
+    if (error || !data || data.length === 0) return null;
+    return data.map(r => r.data);
+  } catch(e) { return null; }
+}
+async function saveUsersToSupabase(arr) {
+  try {
+    const rows = arr.map(u => ({ id: u.id, data: u, updated_at: new Date().toISOString() }));
+    await _supa.from('users').upsert(rows, { onConflict: 'id' });
+  } catch(e) { console.error('[Supabase] saveUsers failed', e); }
+}
 function loadUsers() {
   try { const s = localStorage.getItem('mq_users_v1'); return s ? JSON.parse(s) : [...DEFAULT_USERS]; }
   catch(e) { return [...DEFAULT_USERS]; }
 }
-function saveUsers(arr) { localStorage.setItem('mq_users_v1', JSON.stringify(arr)); }
+function saveUsers(arr) {
+  localStorage.setItem('mq_users_v1', JSON.stringify(arr));
+  saveUsersToSupabase(arr);
+}
 
+async function loadDoctorsFromSupabase() {
+  try {
+    const { data, error } = await _supa.from('doctors').select('*');
+    if (error || !data || data.length === 0) return null;
+    return data.map(r => r.data);
+  } catch(e) { return null; }
+}
+async function saveDoctorsToSupabase(arr) {
+  try {
+    const rows = arr.map(d => ({ id: d.id, data: d, updated_at: new Date().toISOString() }));
+    await _supa.from('doctors').upsert(rows, { onConflict: 'id' });
+  } catch(e) { console.error('[Supabase] saveDoctors failed', e); }
+}
 function loadDoctors() {
   try { const s = localStorage.getItem('mq_doctors_v1'); return s ? JSON.parse(s) : [...DEFAULT_DOCTORS]; }
   catch(e) { return [...DEFAULT_DOCTORS]; }
 }
-function saveDoctors(arr) { localStorage.setItem('mq_doctors_v1', JSON.stringify(arr)); }
+function saveDoctors(arr) {
+  localStorage.setItem('mq_doctors_v1', JSON.stringify(arr));
+  saveDoctorsToSupabase(arr);
+}
 
 // Day schedule config: { doctorId_YYYYMMDD: { maxPatients, reservedInterval } }
 function loadScheduleConf() {
@@ -243,6 +276,34 @@ function saveScheduleConf(obj) { localStorage.setItem('mq_schedule_v1', JSON.str
 let userStore   = loadUsers();
 let doctorStore = loadDoctors();
 let scheduleConf = loadScheduleConf();
+
+/// UPDATED SECTION — Supabase startup sync
+(async () => {
+  try {
+    const [remoteUsers, remoteDoctors] = await Promise.all([
+      loadUsersFromSupabase(),
+      loadDoctorsFromSupabase(),
+    ]);
+    if (remoteUsers && remoteUsers.length > 0) {
+      userStore = remoteUsers;
+      localStorage.setItem('mq_users_v1', JSON.stringify(remoteUsers));
+    } else if (userStore.length > 0) {
+      await saveUsersToSupabase(userStore);
+    }
+    if (remoteDoctors && remoteDoctors.length > 0) {
+      doctorStore = remoteDoctors;
+      localStorage.setItem('mq_doctors_v1', JSON.stringify(remoteDoctors));
+    } else if (doctorStore.length > 0) {
+      await saveDoctorsToSupabase(doctorStore);
+    }
+    console.log('[Startup] Users & Doctors synced from Supabase');
+    // Re-render if UI already loaded
+    if (typeof renderUsersTab === 'function') renderUsersTab();
+    if (typeof renderSettingsTab === 'function') renderSettingsTab();
+  } catch(e) {
+    console.warn('[Startup] Supabase sync failed, using localStorage', e);
+  }
+})();
 
 function getScheduleKey(doctorId, isoDate) {
   return `${doctorId}_${dayKeyInt(isoDate)}`;
