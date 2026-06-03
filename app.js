@@ -26,8 +26,9 @@
 // ═══════════════════════════════════════════════════
 // SUPABASE CONFIG
 // ═══════════════════════════════════════════════════
+/// UPDATED SECTION
 const SUPABASE_URL      = 'https://gkzorxvdzpuvoawlliqt.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdrem9yeHZkenB1dm9hd2xsaXF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NzM4MTUsImV4cCI6MjA5NTA0OTgxNX0.U3Env20-xZ8ra7b7tf-xqAnp4zRowdEaCHVxydUcfrQ';0.WhrtSCr77lxiC5x8wfWCQlkOTy7SlAv1zN906UzHM0o';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdrem9yeHZkenB1dm9hd2xsaXF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NzM4MTUsImV4cCI6MjA5NTA0OTgxNX0.U3Env20-xZ8ra7b7tf-xqAnp4zRowdEaCHVxydUcfrQ';
 const _supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function dayKey(dateStr) {
